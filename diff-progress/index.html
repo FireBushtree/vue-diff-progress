@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div class="container">
+      <div id="app">
+        <button @click="sort">sort</button><div v-for="item in list" :key="item">{{item}}</div>
+      </div>
+
+      <canvas id="canvas" class="canvas" />
+    </div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

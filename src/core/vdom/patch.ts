@@ -28,13 +28,14 @@ import {
   isRegExp,
   isPrimitive
 } from '../util/index'
+import { DiffItemType, DiffQueue } from './diff-progress'
 
 export const emptyNode = new VNode('', {}, [])
 
 const hooks = ['create', 'activate', 'update', 'remove', 'destroy']
 
-function sameVnode(a, b) {
-  return (
+function sameVnode(a, b, queue?: DiffQueue) {
+  const result =
     a.key === b.key &&
     a.asyncFactory === b.asyncFactory &&
     ((a.tag === b.tag &&
@@ -42,7 +43,17 @@ function sameVnode(a, b) {
       isDef(a.data) === isDef(b.data) &&
       sameInputType(a, b)) ||
       (isTrue(a.isAsyncPlaceholder) && isUndef(b.asyncFactory.error)))
-  )
+
+  if (queue) {
+    queue.push({
+      type: DiffItemType.COMPARE_NODE,
+      oldVnode: a,
+      newVnode: b,
+      isSame: result
+    })
+  }
+
+  return result
 }
 
 function sameInputType(a, b) {
@@ -436,12 +447,19 @@ export function createPatchFunction(backend) {
       checkDuplicateKeys(newCh)
     }
 
+    const diffQueue: DiffQueue = []
+    const diffNodes = { oldCh, newCh }
+    if (parentElm) {
+      parentElm.diffNodes = diffNodes
+      parentElm.diffQueue = diffQueue
+    }
+
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
       if (isUndef(oldStartVnode)) {
         oldStartVnode = oldCh[++oldStartIdx] // Vnode has been moved left
       } else if (isUndef(oldEndVnode)) {
         oldEndVnode = oldCh[--oldEndIdx]
-      } else if (sameVnode(oldStartVnode, newStartVnode)) {
+      } else if (sameVnode(oldStartVnode, newStartVnode, diffQueue)) {
         patchVnode(
           oldStartVnode,
           newStartVnode,
@@ -450,8 +468,11 @@ export function createPatchFunction(backend) {
           newStartIdx
         )
         oldStartVnode = oldCh[++oldStartIdx]
+        diffQueue.push({ type: DiffItemType.ADD_OLD_START_IDX })
+
         newStartVnode = newCh[++newStartIdx]
-      } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        diffQueue.push({ type: DiffItemType.ADD_NEW_START_IDX })
+      } else if (sameVnode(oldEndVnode, newEndVnode, diffQueue)) {
         patchVnode(
           oldEndVnode,
           newEndVnode,
@@ -460,8 +481,11 @@ export function createPatchFunction(backend) {
           newEndIdx
         )
         oldEndVnode = oldCh[--oldEndIdx]
+        diffQueue.push({ type: DiffItemType.MINUS_OLD_END_IDX })
+
         newEndVnode = newCh[--newEndIdx]
-      } else if (sameVnode(oldStartVnode, newEndVnode)) {
+        diffQueue.push({ type: DiffItemType.MINUS_NEW_END_IDX })
+      } else if (sameVnode(oldStartVnode, newEndVnode, diffQueue)) {
         // Vnode moved right
         patchVnode(
           oldStartVnode,
@@ -470,15 +494,27 @@ export function createPatchFunction(backend) {
           newCh,
           newEndIdx
         )
-        canMove &&
+        if (canMove) {
           nodeOps.insertBefore(
             parentElm,
             oldStartVnode.elm,
             nodeOps.nextSibling(oldEndVnode.elm)
           )
+
+          diffQueue.push({
+            type: DiffItemType.MOVE_NODE,
+            newNode: oldStartVnode,
+            referenceNode: oldEndVnode,
+            position: 'after'
+          })
+        }
+
         oldStartVnode = oldCh[++oldStartIdx]
+        diffQueue.push({ type: DiffItemType.ADD_OLD_START_IDX })
+
         newEndVnode = newCh[--newEndIdx]
-      } else if (sameVnode(oldEndVnode, newStartVnode)) {
+        diffQueue.push({ type: DiffItemType.MINUS_NEW_END_IDX })
+      } else if (sameVnode(oldEndVnode, newStartVnode, diffQueue)) {
         // Vnode moved left
         patchVnode(
           oldEndVnode,
@@ -487,10 +523,21 @@ export function createPatchFunction(backend) {
           newCh,
           newStartIdx
         )
-        canMove &&
+        if (canMove) {
           nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm)
+          diffQueue.push({
+            type: DiffItemType.MOVE_NODE,
+            newNode: oldEndVnode,
+            referenceNode: oldStartVnode,
+            position: 'before'
+          })
+        }
+
         oldEndVnode = oldCh[--oldEndIdx]
+        diffQueue.push({ type: DiffItemType.MINUS_OLD_END_IDX })
+
         newStartVnode = newCh[++newStartIdx]
+        diffQueue.push({ type: DiffItemType.ADD_NEW_START_IDX })
       } else {
         if (isUndef(oldKeyToIdx))
           oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)
