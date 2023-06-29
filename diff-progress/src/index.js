@@ -1,4 +1,5 @@
 import Arrow from './arrow'
+import { BesselLine } from './bessel-line'
 import Line from './line'
 import Node from './node'
 
@@ -9,6 +10,9 @@ export const NODE_GROUP_DISTANCE = 400
 export const NODE_WIDTH = 96
 export const NODE_HEIGHT = 40
 export const NODE_RADIUS = 8
+
+export const CONTENT_EL_Z_INDEX = 10
+export const MOVE_LINE_EL_Z_INDEX = 20
 
 export default class DiffProgress {
   constructor(sel, { diffNodes, diffQueue }) {
@@ -27,16 +31,42 @@ export default class DiffProgress {
 
   initCanvas(sel) {
     const el = document.querySelector(sel)
-    this.ctx = el.getContext('2d')
-    const dpr = window.devicePixelRatio
+    this.el = el
 
-    el.width = el.clientWidth * dpr
-    el.height = el.clientHeight * dpr
-    this.ctx.scale(dpr, dpr)
+    this.contentEl = this.createCanvasDom(CONTENT_EL_Z_INDEX)
+    this.ctx = this.createCtx(this.contentEl)
+
+    this.moveLineEl = this.createCanvasDom(MOVE_LINE_EL_Z_INDEX)
+    this.moveLineCtx = this.createCtx(this.moveLineEl)
 
     el.addEventListener('click', () => {
       this.renderDiffItem()
     })
+  }
+
+  createCtx(canvasDom) {
+    const dpr = window.devicePixelRatio
+    const ctx = canvasDom.getContext('2d')
+    ctx.scale(dpr, dpr)
+
+    return ctx
+  }
+
+  createCanvasDom(zIndex) {
+    const canvasEl = document.createElement('canvas')
+    const dpr = window.devicePixelRatio
+    const { el } = this
+    canvasEl.style.width = el.clientWidth + 'px'
+    canvasEl.style.height = el.clientHeight + 'px'
+    canvasEl.style.zIndex = zIndex
+    canvasEl.style.position = 'absolute'
+    canvasEl.style.left = 0
+    canvasEl.style.top = 0
+
+    canvasEl.width = el.clientWidth * dpr
+    canvasEl.height = el.clientHeight * dpr
+    el.appendChild(canvasEl)
+    return canvasEl
   }
 
   start() {
@@ -105,19 +135,35 @@ export default class DiffProgress {
     const { newNode, referenceNode } = diff
     const node2move = this.oldNodeMap.get(newNode)
     const flagNode = this.oldNodeMap.get(referenceNode)
-    const c = this.ctx
+    const c = this.moveLineCtx
     c.save()
     c.beginPath()
-    c.moveTo(node2move.x - 10, node2move.y + NODE_HEIGHT / 2)
+    const startX = node2move.x - 10
+    const startY = node2move.y + NODE_HEIGHT / 2
+    c.moveTo(startX, startY)
     const middleY = (node2move.y + flagNode.y) / 2
-    c.quadraticCurveTo(
-      node2move.x - 100,
-      middleY,
-      node2move.x + NODE_WIDTH / 2,
-      flagNode.y + NODE_HEIGHT + 10
-    )
-    c.globalCompositeOperation = 'destination-out'
-    c.stroke()
+    const leftLength = 100
+    const leftX = node2move.x - leftLength
+    const endX = node2move.x + NODE_WIDTH / 2
+    const endY = flagNode.y + NODE_HEIGHT + 10
+    c.quadraticCurveTo(leftX, middleY, endX, endY)
+    const besselLine = new BesselLine(c, {
+      startPoint: { x: startX, y: startY },
+      middlePoint: { x: leftX, y: middleY },
+      endPoint: { x: endX, y: endY }
+    })
+    besselLine.render()
+
+    setTimeout(() => {
+      c.clearRect(
+        0,
+        0,
+        parseInt(this.moveLineEl.style.width),
+        parseInt(this.moveLineEl.style.height)
+      )
+
+      node2move.move({ x: node2move.x, y: flagNode.y + NODE_HEIGHT + 20 })
+    }, 1000)
   }
 
   renderNodes(oldCh, newCH) {
@@ -125,12 +171,11 @@ export default class DiffProgress {
       const nodeList = []
       for (let i = 0; i < list.length; i++) {
         const item = list[i]
-        const node = new Node(this.ctx)
+        const node = new Node(this.ctx, item)
         map.set(item, node)
         node.render({
           x,
-          y: 60 * i + PADDING_TOP,
-          vnode: item
+          y: 60 * i + PADDING_TOP
         })
         nodeList.push(node)
       }

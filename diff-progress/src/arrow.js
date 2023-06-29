@@ -51,7 +51,6 @@ export default class Arrow {
       c.moveTo(topPointX, bottomPointY)
       c.lineTo(x, y)
       c.font = '16px arial'
-      console.log()
       c.fillText(text, x + length - c.measureText(text).width, y - 4)
     }
 

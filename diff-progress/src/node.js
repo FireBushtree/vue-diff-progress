@@ -3,14 +3,15 @@ import { NODE_HEIGHT, NODE_RADIUS, NODE_WIDTH } from '.'
 const NODE_BORDER_COLOR = '#d9d9d9'
 
 export default class Node {
-  constructor(ctx) {
+  constructor(ctx, vnode) {
     this.ctx = ctx
+    this.vnode = vnode
     this.initSize()
   }
 
-  render({ x, y, vnode }) {
+  render({ x, y }) {
     this.createPath(x, y)
-    this.renderText(this.getText(vnode))
+    this.renderText(this.getText(this.vnode))
   }
 
   getText(vnode) {
@@ -77,5 +78,14 @@ export default class Node {
     )
     this.ctx.closePath()
     this.ctx.restore()
+  }
+
+  clear() {
+    this.ctx.clearRect(this.x - 2, this.y - 2, NODE_WIDTH + 4, NODE_HEIGHT + 4)
+  }
+
+  move({ x, y }) {
+    this.clear()
+    this.render({ x, y })
   }
 }

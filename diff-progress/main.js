@@ -6,12 +6,12 @@ new Vue({
   el: '#app',
   data() {
     return {
-      list: ['A', 'B']
+      list: ['A', 'B', 'C', 'D', 'E']
     }
   },
   methods: {
     sort() {
-      this.list = ['B', 'A']
+      this.list = ['E', 'D', 'C', 'B', 'A']
     }
   },
   updated() {
