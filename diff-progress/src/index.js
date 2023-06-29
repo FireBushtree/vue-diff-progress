@@ -135,6 +135,23 @@ export default class DiffProgress {
     const { newNode, referenceNode } = diff
     const node2move = this.oldNodeMap.get(newNode)
     const flagNode = this.oldNodeMap.get(referenceNode)
+    const afterArray = []
+    let curr = flagNode.next
+    while(curr) {
+      afterArray.unshift(curr)
+      curr = curr.next
+    }
+
+    if (afterArray.length > 0) {
+      afterArray.forEach(item => item.moveNext())
+    }
+
+    if (flagNode.next) {
+      const next = flagNode.next
+      node2move.next = next
+    }
+    flagNode.next = node2move
+
     const c = this.moveLineCtx
     c.save()
     c.beginPath()

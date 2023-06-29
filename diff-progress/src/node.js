@@ -6,6 +6,7 @@ export default class Node {
   constructor(ctx, vnode) {
     this.ctx = ctx
     this.vnode = vnode
+    this.next = null
     this.initSize()
   }
 
@@ -87,5 +88,11 @@ export default class Node {
   move({ x, y }) {
     this.clear()
     this.render({ x, y })
+  }
+
+  moveNext() {
+    const x = this.x
+    const y = this.y + NODE_HEIGHT + 20
+    this.move({ x, y })
   }
 }
