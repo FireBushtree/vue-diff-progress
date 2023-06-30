@@ -1,4 +1,4 @@
-import { NODE_WIDTH } from "."
+import { NODE_WIDTH } from '.'
 
 export default class Arrow {
   constructor(ctx, { text, node, length, direction = 'right' }) {
@@ -14,6 +14,17 @@ export default class Arrow {
       return
     }
 
+    let xSkew = 0
+    // prevent arrow from overlapping
+    if (this.connectArrow?.node === node) {
+      const xSkewMap = {
+        left: 100 + 10,
+        right: -100 - 10
+      }
+
+      xSkew = xSkewMap[this.direction]
+    }
+
     this.node = node
     if (this.direction === 'right') {
       this.x = node.x - this.length - 40
@@ -21,6 +32,7 @@ export default class Arrow {
       this.x = node.x + NODE_WIDTH + 40
     }
 
+    this.x += xSkew
     this.y = node.y + node.height / 2
   }
 
@@ -63,7 +75,15 @@ export default class Arrow {
     c.closePath()
   }
 
+  setConnectArrow(arrow) {
+    this.connectArrow = arrow
+  }
+
   move(node) {
+    if (!node) {
+      return
+    }
+
     // 1. clear old arrow
     this.ctx.clearRect(this.x, this.y - 20, this.length, 30)
     // 2. render new arrow

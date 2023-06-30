@@ -137,7 +137,7 @@ export default class DiffProgress {
     const flagNode = this.oldNodeMap.get(referenceNode)
     const afterArray = []
     let curr = flagNode.next
-    while(curr) {
+    while (curr) {
       afterArray.unshift(curr)
       curr = curr.next
     }
@@ -237,6 +237,10 @@ export default class DiffProgress {
       node: newEndVnode,
       direction: 'left'
     })
+    this.oldStartArrow.setConnectArrow(this.oldEndArrow)
+    this.oldEndArrow.setConnectArrow(this.oldStartArrow)
+    this.newStartArrow.setConnectArrow(this.newEndArrow)
+    this.newEndArrow.setConnectArrow(this.newStartArrow)
     ;[
       this.oldStartArrow,
       this.oldEndArrow,
