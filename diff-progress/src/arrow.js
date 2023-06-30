@@ -10,6 +10,10 @@ export default class Arrow {
   }
 
   calcLocation(node) {
+    if (!node) {
+      return
+    }
+
     this.node = node
     if (this.direction === 'right') {
       this.x = node.x - this.length - 40
