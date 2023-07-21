@@ -5,6 +5,7 @@ export enum DiffItemType {
   COMPARE_NODE = 'COMPARE_NODE',
   REMOVE_USELESS_NODES = 'REMOVE_USELESS_NODES',
   ADD_NEW_NODES = 'ADD_NEW_NODES',
+  IDX_WHILE_END = 'IDX_WHILE_END',
 
   ADD_NEW_START_IDX = 'ADD_NEW_START_IDX',
   ADD_NEW_END_IDX = 'ADD_NEW_END_IDX',
@@ -38,6 +39,7 @@ export interface DiffItem {
   // for ['REMOVE_USELESS_NODES']
   oldStartIdx?: number
   oldEndIdx?: number
+  oldCh?: Array<VNode>
 }
 
 export type DiffQueue = Array<DiffItem>

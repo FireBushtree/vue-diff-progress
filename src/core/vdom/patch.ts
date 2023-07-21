@@ -588,6 +588,11 @@ export function createPatchFunction(backend) {
         newStartVnode = newCh[++newStartIdx]
       }
     }
+
+    diffQueue.push({
+      type: DiffItemType.IDX_WHILE_END
+    })
+
     if (oldStartIdx > oldEndIdx) {
       refElm = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm
       addVnodes(
@@ -599,7 +604,9 @@ export function createPatchFunction(backend) {
         insertedVnodeQueue
       )
 
-      diffQueue.push({
+
+
+      newStartIdx <= newEndIdx && diffQueue.push({
         type: DiffItemType.ADD_NEW_NODES,
         newStartIdx,
         newEndIdx,
@@ -611,7 +618,8 @@ export function createPatchFunction(backend) {
       diffQueue.push({
         type: DiffItemType.REMOVE_USELESS_NODES,
         oldStartIdx,
-        oldEndIdx
+        oldEndIdx,
+        oldCh
       })
     }
   }

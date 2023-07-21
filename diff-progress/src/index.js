@@ -2,6 +2,7 @@ import Arrow from './arrow'
 import { BesselLine } from './bessel-line'
 import Line from './line'
 import Node from './node'
+import { delay } from './utils'
 
 export const NODE_WIDTH = 96
 export const NODE_HEIGHT = 40
@@ -10,6 +11,7 @@ export const NODE_PADDING_TOP = 20
 
 export const CONTENT_EL_Z_INDEX = 10
 export const MOVE_LINE_EL_Z_INDEX = 20
+export const COMPARE_LINE_DISTANCE = 10
 
 export const PADDING_LEFT = 400
 export const PADDING_TOP = 100
@@ -102,6 +104,7 @@ export default class DiffProgress {
       MINUS_OLD_END_IDX: () => this.moveOldEndIdx(-1),
 
       MOVE_NODE: this.moveNode,
+      IDX_WHILE_END: this.clearIdxArrow,
 
       ADD_NEW_NODES: this.addNewNode,
       REMOVE_USELESS_NODES: this.removeUselessNodes
@@ -137,30 +140,54 @@ export default class DiffProgress {
     this.newEndArrow.move(target, step)
   }
 
-  addNewNode(diff) {
-    const { newStartIdx, newEndIdx, newCh } = diff
+  clearIdxArrow() {
+    this.clearMiddleArea()
+    ;[
+      this.oldStartArrow,
+      this.oldEndArrow,
+      this.newStartArrow,
+      this.newEndArrow
+    ].forEach(item => {
+      item.clear()
+    })
+  }
+
+  renderExtraNodesBorder(startIdx, endIdx, beginX) {
     const borderPadding = 10
-    const borderStartX = NEW_NODE_LIST_PADDING_LEFT - borderPadding
+    const borderStartX = beginX - borderPadding
     const borderStartY =
-      newStartIdx * (NODE_PADDING_TOP + NODE_HEIGHT) +
-      PADDING_TOP -
-      borderPadding
+      startIdx * (NODE_PADDING_TOP + NODE_HEIGHT) + PADDING_TOP - borderPadding
 
     const borderWidth = NODE_WIDTH + borderPadding * 2
     const borderHeight =
-      (newEndIdx - newStartIdx) * (NODE_PADDING_TOP + NODE_HEIGHT) +
+      (endIdx - startIdx) * (NODE_PADDING_TOP + NODE_HEIGHT) +
       NODE_HEIGHT +
       borderPadding * 2
 
     const c = this.ctx
     c.beginPath()
 
-    // 1. render dash
     c.lineJoin = 'round'
     c.setLineDash([3, 6])
     c.strokeRect(borderStartX, borderStartY, borderWidth, borderHeight)
+    c.closePath()
+
+    return {
+      borderStartX,
+      borderStartY,
+      borderWidth,
+      borderHeight
+    }
+  }
+
+  async addNewNode(diff) {
+    const { newStartIdx, newEndIdx, newCh } = diff
+    // 1. render dash
+    this.renderExtraNodesBorder(newStartIdx, newEndIdx, PADDING_LEFT)
 
     // 2. render line
+    const c = this.ctx
+    c.beginPath()
     const borderMiddleY = borderStartY + borderHeight / 2
     const lineStartX = borderStartX
     const lineStartY = borderMiddleY
@@ -180,6 +207,8 @@ export default class DiffProgress {
     line.render()
 
     // 3. render node
+    await delay(1000)
+
     let count = 0
     for (let i = newStartIdx; i <= newEndIdx; i++) {
       const item = newCh[i]
@@ -192,11 +221,23 @@ export default class DiffProgress {
           PADDING_TOP
       })
     }
-
     c.closePath()
   }
 
-  removeUselessNodes(diff) {}
+  async removeUselessNodes(diff) {
+    const { oldStartIdx, oldEndIdx } = diff
+    const { borderStartX, borderStartY, borderWidth, borderHeight } =
+      this.renderExtraNodesBorder(oldStartIdx, oldEndIdx, PADDING_LEFT)
+
+    await delay(1000)
+    const extraClearPadding = 2
+    this.ctx.clearRect(
+      borderStartX - extraClearPadding,
+      borderStartY - extraClearPadding,
+      borderWidth + extraClearPadding * 2,
+      borderHeight + extraClearPadding * 2
+    )
+  }
 
   moveNode(diff) {
     const { newNode, referenceNode } = diff
@@ -318,32 +359,34 @@ export default class DiffProgress {
     })
   }
 
-  renderCompareLine({ oldVnode, newVnode, isSame }) {
-    const compareLineDistance = 10
-
+  clearMiddleArea() {
     const firstNode = this.oldNodeList[0]
     const longerList =
       this.oldNodeList.length > this.newNodeList.length
         ? this.oldNodeList
         : this.newNodeList
     const lastNode = longerList[longerList.length - 1]
-    // 1. clear old line
     this.ctx.clearRect(
-      firstNode.x + NODE_WIDTH + compareLineDistance,
+      firstNode.x + NODE_WIDTH + COMPARE_LINE_DISTANCE,
       firstNode.y,
-      NODE_GROUP_DISTANCE - compareLineDistance,
+      NODE_GROUP_DISTANCE - COMPARE_LINE_DISTANCE,
       lastNode.y + NODE_HEIGHT
     )
+  }
+
+  renderCompareLine({ oldVnode, newVnode, isSame }) {
+    // 1. clear old line
+    this.clearMiddleArea()
 
     // 2. render new line
     const oldNode = this.oldNodeMap.get(oldVnode)
     const newNode = this.newNodeMap.get(newVnode)
     const startPoint = {
-      x: oldNode.x + NODE_WIDTH + compareLineDistance,
+      x: oldNode.x + NODE_WIDTH + COMPARE_LINE_DISTANCE,
       y: oldNode.y + NODE_HEIGHT / 2
     }
     const endPoint = {
-      x: newNode.x - compareLineDistance,
+      x: newNode.x - COMPARE_LINE_DISTANCE,
       y: newNode.y + NODE_HEIGHT / 2
     }
     const line = new Line(this.ctx, {

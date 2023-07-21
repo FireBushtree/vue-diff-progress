@@ -84,13 +84,18 @@ export default class Arrow {
     this.connectArrow = arrow
   }
 
+  clear() {
+    this.ctx.clearRect(this.x, this.y - 20, this.length, 30)
+  }
+
   move(node, step) {
     if (!node && !step) {
       return
     }
 
     // 1. clear old arrow
-    this.ctx.clearRect(this.x, this.y - 20, this.length, 30)
+    this.clear()
+
     // 2. render new arrow
     this.calcLocation(node, step)
     this.draw()
