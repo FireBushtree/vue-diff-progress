@@ -11,7 +11,7 @@ new Vue({
   },
   methods: {
     sort() {
-      this.list = ['B', 'A']
+      this.list = ['A', 'B', 'C', 'D']
     }
   },
   updated() {

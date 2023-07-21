@@ -1,17 +1,22 @@
-import { NODE_WIDTH } from '.'
+import { NODE_HEIGHT, NODE_PADDING_TOP, NODE_WIDTH } from '.'
 
 export default class Arrow {
   constructor(ctx, { text, node, length, direction = 'right' }) {
     this.ctx = ctx
     this.text = text
+    this.paddingNode = 40
     this.length = length || 100
     this.direction = direction
     this.calcLocation(node)
   }
 
-  calcLocation(node) {
+  calcLocation(node, step) {
     if (!node) {
-      return
+      node = {
+        ...this.node,
+        x: this.node.x,
+        y: this.node.y + (NODE_PADDING_TOP + NODE_HEIGHT) * step
+      }
     }
 
     let xSkew = 0
@@ -27,9 +32,9 @@ export default class Arrow {
 
     this.node = node
     if (this.direction === 'right') {
-      this.x = node.x - this.length - 40
+      this.x = node.x - this.length - this.paddingNode
     } else {
-      this.x = node.x + NODE_WIDTH + 40
+      this.x = node.x + NODE_WIDTH + this.paddingNode
     }
 
     this.x += xSkew
@@ -79,15 +84,15 @@ export default class Arrow {
     this.connectArrow = arrow
   }
 
-  move(node) {
-    if (!node) {
+  move(node, step) {
+    if (!node && !step) {
       return
     }
 
     // 1. clear old arrow
     this.ctx.clearRect(this.x, this.y - 20, this.length, 30)
     // 2. render new arrow
-    this.calcLocation(node)
+    this.calcLocation(node, step)
     this.draw()
   }
 }

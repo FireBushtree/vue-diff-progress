@@ -598,8 +598,21 @@ export function createPatchFunction(backend) {
         newEndIdx,
         insertedVnodeQueue
       )
+
+      diffQueue.push({
+        type: DiffItemType.ADD_NEW_NODES,
+        newStartIdx,
+        newEndIdx,
+        newCh
+      })
     } else if (newStartIdx > newEndIdx) {
       removeVnodes(oldCh, oldStartIdx, oldEndIdx)
+
+      diffQueue.push({
+        type: DiffItemType.REMOVE_USELESS_NODES,
+        oldStartIdx,
+        oldEndIdx
+      })
     }
   }
 

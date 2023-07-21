@@ -2,8 +2,16 @@ export class BesselLine {
   constructor(ctx, { startPoint, middlePoint, endPoint }) {
     this.ctx = ctx
     this.startPoint = startPoint
-    this.middlePoint = middlePoint
     this.endPoint = endPoint
+
+    if (middlePoint) {
+      this.middlePoint = middlePoint
+    } else {
+      this.middlePoint = {
+        x: (this.startPoint.x + this.endPoint.x) / 2,
+        y: (this.startPoint.y + this.endPoint.y) / 2
+      }
+    }
   }
 
   render() {

@@ -3,16 +3,19 @@ import { BesselLine } from './bessel-line'
 import Line from './line'
 import Node from './node'
 
-export const PADDING_LEFT = 400
-export const PADDING_TOP = 100
-export const NODE_GROUP_DISTANCE = 400
-
 export const NODE_WIDTH = 96
 export const NODE_HEIGHT = 40
 export const NODE_RADIUS = 8
+export const NODE_PADDING_TOP = 20
 
 export const CONTENT_EL_Z_INDEX = 10
 export const MOVE_LINE_EL_Z_INDEX = 20
+
+export const PADDING_LEFT = 400
+export const PADDING_TOP = 100
+export const NODE_GROUP_DISTANCE = 400
+export const NEW_NODE_LIST_PADDING_LEFT =
+  PADDING_LEFT + NODE_WIDTH + NODE_GROUP_DISTANCE
 
 export default class DiffProgress {
   constructor(sel, { diffNodes, diffQueue }) {
@@ -73,7 +76,7 @@ export default class DiffProgress {
     const { oldCh, newCh } = this.diffNodes
     this.renderNodes(oldCh, newCh)
     this.renderArrow()
-    this.renderDiffItem()
+    // this.renderDiffItem()
   }
 
   renderDiffItem() {
@@ -98,7 +101,10 @@ export default class DiffProgress {
       ADD_OLD_END_IDX: () => this.moveOldEndIdx(1),
       MINUS_OLD_END_IDX: () => this.moveOldEndIdx(-1),
 
-      MOVE_NODE: this.moveNode
+      MOVE_NODE: this.moveNode,
+
+      ADD_NEW_NODES: this.addNewNode,
+      REMOVE_USELESS_NODES: this.removeUselessNodes
     }
     const handler = handlerMap[diffItem.type]
 
@@ -110,26 +116,87 @@ export default class DiffProgress {
   moveOldStartIdx(step) {
     this.oldStartIdx += step
     const target = this.oldNodeList[this.oldStartIdx]
-    this.oldStartArrow.move(target)
+    this.oldStartArrow.move(target, step)
   }
 
   moveNewStartIdx(step) {
     this.newStartIdx += step
     const target = this.newNodeList[this.newStartIdx]
-    this.newStartArrow.move(target)
+    this.newStartArrow.move(target, step)
   }
 
   moveOldEndIdx(step) {
     this.oldEndIdx += step
     const target = this.oldNodeList[this.oldEndIdx]
-    this.oldEndArrow.move(target)
+    this.oldEndArrow.move(target, step)
   }
 
   moveNewEndIdx(step) {
     this.newEndIdx += step
     const target = this.newNodeList[this.newEndIdx]
-    this.newEndArrow.move(target)
+    this.newEndArrow.move(target, step)
   }
+
+  addNewNode(diff) {
+    const { newStartIdx, newEndIdx, newCh } = diff
+    const borderPadding = 10
+    const borderStartX = NEW_NODE_LIST_PADDING_LEFT - borderPadding
+    const borderStartY =
+      newStartIdx * (NODE_PADDING_TOP + NODE_HEIGHT) +
+      PADDING_TOP -
+      borderPadding
+
+    const borderWidth = NODE_WIDTH + borderPadding * 2
+    const borderHeight =
+      (newEndIdx - newStartIdx) * (NODE_PADDING_TOP + NODE_HEIGHT) +
+      NODE_HEIGHT +
+      borderPadding * 2
+
+    const c = this.ctx
+    c.beginPath()
+
+    // 1. render dash
+    c.lineJoin = 'round'
+    c.setLineDash([3, 6])
+    c.strokeRect(borderStartX, borderStartY, borderWidth, borderHeight)
+
+    // 2. render line
+    const borderMiddleY = borderStartY + borderHeight / 2
+    const lineStartX = borderStartX
+    const lineStartY = borderMiddleY
+    const lineEndX =
+      this.oldStartArrow.x +
+      this.oldStartArrow.length +
+      NODE_WIDTH +
+      this.oldStartArrow.paddingNode +
+      10
+
+    const lineEndY = this.oldStartArrow.y
+    const line = new BesselLine(this.ctx, {
+      startPoint: { x: lineStartX, y: lineStartY },
+      endPoint: { x: lineEndX, y: lineEndY }
+    })
+    c.setLineDash([])
+    line.render()
+
+    // 3. render node
+    let count = 0
+    for (let i = newStartIdx; i <= newEndIdx; i++) {
+      const item = newCh[i]
+      const node = new Node(this.ctx, item)
+      node.render({
+        x: PADDING_LEFT,
+        y:
+          (NODE_PADDING_TOP + NODE_HEIGHT) *
+            (this.oldNodeList.length + count++) +
+          PADDING_TOP
+      })
+    }
+
+    c.closePath()
+  }
+
+  removeUselessNodes(diff) {}
 
   moveNode(diff) {
     const { newNode, referenceNode } = diff
@@ -192,7 +259,7 @@ export default class DiffProgress {
         map.set(item, node)
         node.render({
           x,
-          y: 60 * i + PADDING_TOP
+          y: (NODE_PADDING_TOP + NODE_HEIGHT) * i + PADDING_TOP
         })
         nodeList.push(node)
       }
@@ -203,7 +270,7 @@ export default class DiffProgress {
     this.newNodeList = renderGroup(
       this.newNodeMap,
       newCH,
-      PADDING_LEFT + NODE_WIDTH + NODE_GROUP_DISTANCE
+      NEW_NODE_LIST_PADDING_LEFT
     )
   }
 
